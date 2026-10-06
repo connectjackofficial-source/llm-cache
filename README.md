@@ -35,6 +35,15 @@ cache = LLMCache(ttl_seconds=3600)  # expire after 1 hour
 
 ```python
 print(cache.stats())  # {"entries": 42}
+cache.delete("gpt-4o", "explain caching")  # drop one entry
+cache.clear()  # drop all
+```
+
+## CLI
+
+```bash
+python -m llm_cache.cli stats
+python -m llm_cache.cli clear
 ```
 
 ## License
