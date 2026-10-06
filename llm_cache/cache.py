@@ -65,3 +65,14 @@ class LLMCache:
     def stats(self) -> dict:
         row = self.conn.execute("SELECT COUNT(*) FROM cache").fetchone()
         return {"entries": row[0]}
+
+    def delete(self, model: str, prompt: str) -> bool:
+        key = make_key(model, prompt)
+        cur = self.conn.execute("DELETE FROM cache WHERE key = ?", (key,))
+        self.conn.commit()
+        return cur.rowcount > 0
+
+    def clear(self) -> int:
+        cur = self.conn.execute("DELETE FROM cache")
+        self.conn.commit()
+        return cur.rowcount
