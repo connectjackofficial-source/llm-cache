@@ -36,10 +36,12 @@ def make_key(model: str, prompt: str) -> str:
 
 
 class LLMCache:
-    def __init__(self, path: Optional[Path] = None, ttl_seconds: int = 0):
+    def __init__(self, path: Optional[Path] = None, ttl_seconds: int = 0,
+                 max_entries: int = 0):
         self.path = Path(path) if path else db_path()
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.ttl = ttl_seconds
+        self.max_entries = max_entries
         self.conn = sqlite3.connect(self.path)
         self.conn.executescript(SCHEMA)
 
@@ -51,6 +53,10 @@ class LLMCache:
             return None
         if self.ttl and (time.time() - row[1]) > self.ttl:
             return None
+        # LRU touch: mark this entry as most recently used
+        self.conn.execute("UPDATE cache SET ts = ? WHERE key = ?",
+                          (int(time.time()), key))
+        self.conn.commit()
         return row[0]
 
     def set(self, model: str, prompt: str, response: str) -> str:
@@ -59,12 +65,26 @@ class LLMCache:
             "INSERT OR REPLACE INTO cache (key, model, prompt, response, ts) "
             "VALUES (?,?,?,?,?)",
             (key, model, prompt, response, int(time.time())))
+        if self.max_entries:
+            self._evict()
         self.conn.commit()
         return key
 
+    def _evict(self):
+        """Drop the oldest entries until we are under max_entries."""
+        while True:
+            row = self.conn.execute(
+                "SELECT COUNT(*) FROM cache").fetchone()
+            if row[0] <= self.max_entries:
+                break
+            self.conn.execute(
+                "DELETE FROM cache WHERE key = (SELECT key FROM cache "
+                "ORDER BY ts ASC LIMIT 1)")
+
     def stats(self) -> dict:
         row = self.conn.execute("SELECT COUNT(*) FROM cache").fetchone()
-        return {"entries": row[0]}
+        return {"entries": row[0],
+                "max_entries": self.max_entries or None}
 
     def delete(self, model: str, prompt: str) -> bool:
         key = make_key(model, prompt)
