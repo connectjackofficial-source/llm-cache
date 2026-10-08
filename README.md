@@ -31,6 +31,15 @@ With a TTL (seconds):
 cache = LLMCache(ttl_seconds=3600)  # expire after 1 hour
 ```
 
+With a size cap (LRU eviction):
+
+```python
+cache = LLMCache(max_entries=1000)  # drop the oldest entries when full
+```
+
+Hits refresh the recency timestamp, so frequently used entries survive
+eviction.
+
 ## Stats
 
 ```python
