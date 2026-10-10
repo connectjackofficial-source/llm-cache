@@ -43,9 +43,19 @@ eviction.
 ## Stats
 
 ```python
-print(cache.stats())  # {"entries": 42}
+print(cache.stats())
+# {"entries": 42, "max_entries": null, "hits": 300, "misses": 150, "hit_rate": 0.667}
 cache.delete("gpt-4o", "explain caching")  # drop one entry
 cache.clear()  # drop all
+```
+
+Hits and misses are tracked persistently, so you can tell whether the cache
+is actually saving you calls. Use it as a context manager to close the
+SQLite connection automatically:
+
+```python
+with LLMCache() as cache:
+    cache.get("gpt-4o", "explain caching")
 ```
 
 ## CLI
