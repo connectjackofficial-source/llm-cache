@@ -130,6 +130,32 @@ class LLMCache:
         self.conn.commit()
         return cur.rowcount > 0
 
+    def set_many(self, items: list) -> int:
+        """Batch write [(model, prompt, response), ...]. Returns keys written."""
+        now = int(time.time())
+        n = 0
+        for model, prompt, response in items:
+            key = make_key(model, prompt)
+            self.conn.execute(
+                "INSERT OR REPLACE INTO cache (key, model, prompt, response, ts) "
+                "VALUES (?,?,?,?,?)",
+                (key, model, prompt, response, now))
+            n += 1
+        if self.max_entries:
+            self._evict()
+        self.conn.commit()
+        return n
+
+    def get_many(self, keys: list) -> dict:
+        """Batch read [(model, prompt), ...]. Returns {index: response} for
+        the keys that hit, in input order."""
+        found = {}
+        for i, (model, prompt) in enumerate(keys):
+            resp = self.get(model, prompt)
+            if resp is not None:
+                found[i] = resp
+        return found
+
     def clear(self) -> int:
         cur = self.conn.execute("DELETE FROM cache")
         self.conn.commit()
