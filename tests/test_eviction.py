@@ -16,6 +16,7 @@ def test_eviction_drops_oldest():
         # newest 3 are p2, p3, p4
         assert cache.get("m0", "p0") is None
         assert cache.get("m4", "p4") == "r4"
+        cache.close()
     print("test_eviction_drops_oldest: ok")
 
 
@@ -30,6 +31,7 @@ def test_lru_touch_keeps_recent():
         cache.set("m2", "p2", "r2")
         assert cache.get("m1", "p1") is None
         assert cache.get("m0", "p0") == "r0"
+        cache.close()
     print("test_lru_touch_keeps_recent: ok")
 
 
