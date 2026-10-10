@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0 - 2026-10-10
+
+- `set_many()` / `get_many()` batch API for pipelines
+- Batch writes honor `max_entries` eviction
+
 ## 0.4.0 - 2026-10-10
 
 - Persistent hit/miss counters

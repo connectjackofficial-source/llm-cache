@@ -58,6 +58,22 @@ with LLMCache() as cache:
     cache.get("gpt-4o", "explain caching")
 ```
 
+## Batch API
+
+For pipelines that replay many cached prompts, use the batch methods
+(one commit instead of one per key):
+
+```python
+cache.set_many([
+    ("gpt-4o", "q1", "a1"),
+    ("sonnet", "q2", "a2"),
+])
+found = cache.get_many([("gpt-4o", "q1"), ("sonnet", "missing"), ("sonnet", "q2")])
+# {0: "a1", 2: "a2"}  -- only hits, indexed by input position
+```
+
+`set_many()` still honors `max_entries` eviction.
+
 ## CLI
 
 ```bash
