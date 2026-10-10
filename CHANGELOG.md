@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0 - 2026-10-10
+
+- Persistent hit/miss counters
+- `hit_rate` in stats
+- `close()` / context-manager support
+
 ## 0.3.0 - 2026-10-08
 
 - LRU eviction via `max_entries`
