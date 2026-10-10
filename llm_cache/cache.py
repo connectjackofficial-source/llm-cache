@@ -28,6 +28,10 @@ CREATE TABLE IF NOT EXISTS cache (
     response TEXT,
     ts INTEGER
 );
+CREATE TABLE IF NOT EXISTS counters (
+    name TEXT PRIMARY KEY,
+    value INTEGER NOT NULL DEFAULT 0
+);
 """
 
 
@@ -45,14 +49,40 @@ class LLMCache:
         self.conn = sqlite3.connect(self.path)
         self.conn.executescript(SCHEMA)
 
+    def close(self):
+        self.conn.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
+
+    def _counter(self, name: str, delta: int = 1) -> int:
+        self.conn.execute(
+            "INSERT INTO counters (name, value) VALUES (?, ?) "
+            "ON CONFLICT(name) DO UPDATE SET value = value + excluded.value",
+            (name, delta))
+        return self._counter_value(name)
+
+    def _counter_value(self, name: str) -> int:
+        row = self.conn.execute(
+            "SELECT value FROM counters WHERE name = ?", (name,)).fetchone()
+        return row[0] if row else 0
+
     def get(self, model: str, prompt: str) -> Optional[str]:
         key = make_key(model, prompt)
         row = self.conn.execute(
             "SELECT response, ts FROM cache WHERE key = ?", (key,)).fetchone()
         if not row:
+            self._counter("misses")
+            self.conn.commit()
             return None
         if self.ttl and (time.time() - row[1]) > self.ttl:
+            self._counter("misses")
+            self.conn.commit()
             return None
+        self._counter("hits")
         # LRU touch: mark this entry as most recently used
         self.conn.execute("UPDATE cache SET ts = ? WHERE key = ?",
                           (int(time.time()), key))
@@ -83,8 +113,16 @@ class LLMCache:
 
     def stats(self) -> dict:
         row = self.conn.execute("SELECT COUNT(*) FROM cache").fetchone()
-        return {"entries": row[0],
-                "max_entries": self.max_entries or None}
+        hits = self._counter_value("hits")
+        misses = self._counter_value("misses")
+        total = hits + misses
+        return {
+            "entries": row[0],
+            "max_entries": self.max_entries or None,
+            "hits": hits,
+            "misses": misses,
+            "hit_rate": round(hits / total, 3) if total else None,
+        }
 
     def delete(self, model: str, prompt: str) -> bool:
         key = make_key(model, prompt)
