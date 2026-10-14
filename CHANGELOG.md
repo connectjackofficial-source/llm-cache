@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.0 - 2026-10-14
+
+- `evict_older_than(seconds)` — manual sweep for caches running without
+  TTL auto-expiry
+- `top_entries(n)` — newest cache entries for diagnostics and debugging
+
 ## 0.5.0 - 2026-10-10
 
 - `set_many()` / `get_many()` batch API for pipelines
