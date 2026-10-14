@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.0 - 2026-10-14
+
+- `keys_matching(needle)` — find cached prompts containing a substring,
+  for ops lookups ("which cached calls hit the v2 endpoint?")
+
 ## 0.6.0 - 2026-10-14
 
 - `evict_older_than(seconds)` — manual sweep for caches running without
