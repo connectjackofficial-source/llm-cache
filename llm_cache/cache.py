@@ -156,6 +156,30 @@ class LLMCache:
                 found[i] = resp
         return found
 
+    def evict_older_than(self, seconds: int) -> int:
+        """Delete entries not touched in the last *seconds* seconds.
+
+        The manual sweep for caches running with ttl=0 (no auto-expiry).
+        Returns the number of entries removed.
+        """
+        cutoff = int(time.time()) - seconds
+        cur = self.conn.execute(
+            "DELETE FROM cache WHERE ts < ?", (cutoff,))
+        self.conn.commit()
+        return cur.rowcount
+
+    def top_entries(self, n: int = 10) -> list:
+        """Newest cache entries (diagnostics / debugging).
+
+        Returns [{"model", "prompt", "response", "ts"}] with truncated
+        prompt/response, newest first.
+        """
+        rows = self.conn.execute(
+            "SELECT model, prompt, response, ts FROM cache "
+            "ORDER BY ts DESC LIMIT ?", (n,)).fetchall()
+        return [{"model": r[0], "prompt": (r[1] or "")[:60],
+                 "response": (r[2] or "")[:80], "ts": r[3]} for r in rows]
+
     def clear(self) -> int:
         cur = self.conn.execute("DELETE FROM cache")
         self.conn.commit()
