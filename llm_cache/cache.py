@@ -180,6 +180,17 @@ class LLMCache:
         return [{"model": r[0], "prompt": (r[1] or "")[:60],
                  "response": (r[2] or "")[:80], "ts": r[3]} for r in rows]
 
+    def keys_matching(self, needle: str, limit: int = 50) -> list:
+        """Find cache keys whose prompt contains *needle*.
+
+        For ops work: "which cached calls reference the v2 endpoint?"
+        Returns [{"key", "model", "ts"}] newest first.
+        """
+        rows = self.conn.execute(
+            "SELECT key, model, ts FROM cache WHERE prompt LIKE ? "
+            "ORDER BY ts DESC LIMIT ?", (f"%{needle}%", limit)).fetchall()
+        return [{"key": r[0], "model": r[1], "ts": r[2]} for r in rows]
+
     def clear(self) -> int:
         cur = self.conn.execute("DELETE FROM cache")
         self.conn.commit()
